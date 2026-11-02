@@ -92,7 +92,7 @@ static NSString *NASKey(Class cls, SEL sel) {
 // 统一替换函数：签名严格为 v@:@（返回 void，单对象参数），与待 hook 方法一致。
 static void NASPresentReplacement(id self, SEL _cmd, id content) {
     NSString *key = NASKey([self class], _cmd);
-    IMP orig = gOrigByKey[key] ? [gOrigByKey[key] pointerValue] : NULL;
+    IMP orig = gOrigByKey[key] ? (IMP)[gOrigByKey[key] pointerValue] : NULL;
     if (NASShouldBlock(content)) {
         os_log(NASLog(), "BLOCK %{public}s %{public}s content=%{public}s",
                class_getName([self class]), sel_getName(_cmd), class_getName([content class]));
@@ -128,11 +128,11 @@ static BOOL NASHookClass(Class cls) {
         if (!ok) continue;
 
         NSString *key = NASKey(cls, sel);
-        if (gHookedKeys[key]) continue;
+        if ([gHookedKeys containsObject:key]) continue;
         IMP orig = NULL;
         MSHookMessageEx(cls, sel, (IMP)NASPresentReplacement, &orig);
         if (orig) {
-            gOrigByKey[key] = [NSValue valueWithPointer:orig];
+            gOrigByKey[key] = [NSValue valueWithPointer:(void *)orig];
             [gHookedKeys addObject:key];
             hookedAny = YES;
             os_log(NASLog(), "HOOK %{public}s %{public}s", class_getName(cls), sel_getName(sel));
@@ -142,17 +142,17 @@ static BOOL NASHookClass(Class cls) {
     return hookedAny;
 }
 
+static void NASPrefsChanged(CFNotificationCenterRef center, void *observer, CFNotificationName name, const void *object, CFDictionaryRef userInfo) {
+    NASReloadPrefs();
+}
+
 %ctor {
     gOrigByKey  = [NSMutableDictionary dictionary];
     gHookedKeys = [NSMutableSet set];
 
     NASReloadPrefs();
-    CFNotificationCenterCallBack nasPrefsChanged =
-        ^(CFNotificationCenterRef c, void *o, CFStringRef n, const void *obj, CFDictionaryRef i) {
-            NASReloadPrefs();
-        };
     CFNotificationCenterAddObserver(
-        CFNotificationCenterGetDarwinNotifyCenter(), NULL, nasPrefsChanged,
+        CFNotificationCenterGetDarwinNotifyCenter(), NULL, NASPrefsChanged,
         CFSTR("com.jumping.noalarmisland/preferencesChanged"), NULL,
         CFNotificationSuspensionBehaviorDeliverImmediately);
 
