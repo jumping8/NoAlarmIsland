@@ -48,6 +48,18 @@
             <key>default</key>
             <false/>
         </dict>
+        <dict>
+            <key>cell</key>
+            <string>PSSwitchCell</string>
+            <key>label</key>
+            <string>取证模式（日志观察，不阻断）</string>
+            <key>key</key>
+            <string>Discovery</string>
+            <key>default</key>
+            <false/>
+            <key>footerText</key>
+            <string>仅在未确认真实 hook 点时开启：仅把派发方法名记入 syslog（log stream --predicate 'subsystem == "com.jumping.noalarmisland"'），永不阻断，不会进安全模式。拿到方法名后关闭并回填 kTargets。</string>
+        </dict>
     </array>
 </dict>
 </plist>

@@ -1,6 +1,6 @@
 Package: com.jumping.noalarmisland
 Name: NoAlarmIsland
-Version: 1.0.0
+Version: 1.0.1
 Architecture: iphoneos-arm64
 Description: 禁止系统闹钟（及可选计时器）上灵动岛（Dynamic Island），其余灵动岛内容不受影响。
 Maintainer: jumping <jumping@local>
