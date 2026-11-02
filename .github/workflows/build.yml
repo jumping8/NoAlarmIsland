@@ -1,6 +1,6 @@
 name: Build NoAlarmIsland .deb
 
-# 在 GitHub 托管的 Linux runner 上，用 theos 容器镜像交叉编译 rootless deb。
+# 在 GitHub 托管的 Ubuntu runner 上用官方 theos 安装器交叉编译 rootless deb。
 # push 到 main 或打 v* tag 时自动触发；也可在 Actions 页手动 Run workflow。
 on:
   push:
@@ -14,43 +14,39 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    # sbingner/theos：官方 theos CI 标准镜像，自带 iOS 交叉工具链 / clang / ldid / dpkg-deb
-    container:
-      image: sbingner/theos
+
+    env:
+      THEOS: ${{ github.workspace }}/theos
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Locate theos
-        id: theos
+      - name: Install theos (官方安装器：含交叉工具链 + patched SDK)
+        timeout-minutes: 20
         run: |
-          T="$THEOS"
-          if [ -z "$T" ] || [ ! -d "$T/makefiles" ]; then
-            for p in /opt/theos /theos; do
-              if [ -d "$p/makefiles" ]; then T="$p"; break; fi
-            done
+          export THEOS="${{ env.THEOS }}"
+          # 非 root 运行（脚本禁止 root）；runner 默认用户即非 root
+          bash -c "$(curl -fsSL https://raw.githubusercontent.com/theos/theos/master/bin/install-theos)" </dev/null
+          echo "theos installed at: $THEOS"
+          ls "$THEOS"
+
+      # 兜底：确保存在 iPhoneOS patched SDK（含 MobileTimer 等私有框架 tbd）
+      - name: Ensure iOS SDK present
+        run: |
+          export THEOS="${{ env.THEOS }}"
+          if ! ls "$THEOS/sdks"/*.sdk >/dev/null 2>&1; then
+            echo "installer 未装上 SDK，手动拉取 iPhoneOS16.5 (patched)"
+            curl -fsSL -o /tmp/ios16.5.sdk.tar.xz \
+              https://github.com/theos/sdks/releases/download/master-146e41f/iPhoneOS16.5.sdk.tar.xz
+            mkdir -p "$THEOS/sdks"
+            tar -xJf /tmp/ios16.5.sdk.tar.xz -C "$THEOS/sdks"
           fi
-          echo "THEOS=$T" >> "$GITHUB_ENV"
-          echo "theos at: $T"
-          ls "$T"
-
-      - name: Ensure dpkg-deb present
-        run: |
-          which dpkg-deb >/dev/null 2>&1 || { apt-get update -qq && apt-get install -y dpkg; }
-          dpkg-deb --version | head -1
-
-      # theos/sdks 的 iPhoneOS16.5 含私有框架 tbd（MobileTimer 等），正是 hook 所需
-      - name: Download iOS SDK (iPhoneOS16.5, patched w/ private frameworks)
-        run: |
-          curl -fsSL -o /tmp/iphoneos16.5.sdk.tar.xz \
-            https://github.com/theos/sdks/releases/download/master-146e41f/iPhoneOS16.5.sdk.tar.xz
-          mkdir -p "$THEOS/sdks"
-          tar -xJf /tmp/iphoneos16.5.sdk.tar.xz -C "$THEOS/sdks"
           ls "$THEOS/sdks"
 
       - name: Build package (rootless)
         run: |
+          export THEOS="${{ env.THEOS }}"
           export PATH="$THEOS/bin:$PATH"
           make package FINALPACKAGE=1
           echo "== packages =="
