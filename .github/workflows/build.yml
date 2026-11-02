@@ -1,0 +1,71 @@
+name: Build NoAlarmIsland .deb
+
+# 在 GitHub 托管的 Linux runner 上，用 theos 容器镜像交叉编译 rootless deb。
+# push 到 main 或打 v* tag 时自动触发；也可在 Actions 页手动 Run workflow。
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    # sbingner/theos：官方 theos CI 标准镜像，自带 iOS 交叉工具链 / clang / ldid / dpkg-deb
+    container:
+      image: sbingner/theos
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Locate theos
+        id: theos
+        run: |
+          T="$THEOS"
+          if [ -z "$T" ] || [ ! -d "$T/makefiles" ]; then
+            for p in /opt/theos /theos; do
+              if [ -d "$p/makefiles" ]; then T="$p"; break; fi
+            done
+          fi
+          echo "THEOS=$T" >> "$GITHUB_ENV"
+          echo "theos at: $T"
+          ls "$T"
+
+      - name: Ensure dpkg-deb present
+        run: |
+          which dpkg-deb >/dev/null 2>&1 || { apt-get update -qq && apt-get install -y dpkg; }
+          dpkg-deb --version | head -1
+
+      # theos/sdks 的 iPhoneOS16.5 含私有框架 tbd（MobileTimer 等），正是 hook 所需
+      - name: Download iOS SDK (iPhoneOS16.5, patched w/ private frameworks)
+        run: |
+          curl -fsSL -o /tmp/iphoneos16.5.sdk.tar.xz \
+            https://github.com/theos/sdks/releases/download/master-146e41f/iPhoneOS16.5.sdk.tar.xz
+          mkdir -p "$THEOS/sdks"
+          tar -xJf /tmp/iphoneos16.5.sdk.tar.xz -C "$THEOS/sdks"
+          ls "$THEOS/sdks"
+
+      - name: Build package (rootless)
+        run: |
+          export PATH="$THEOS/bin:$PATH"
+          make package FINALPACKAGE=1
+          echo "== packages =="
+          ls -l packages/
+
+      - name: Upload .deb artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: NoAlarmIsland-deb
+          path: packages/*.deb
+          if-no-files-found: error
+
+      # 仅当推送 v* tag 时，自动创建 GitHub Release 并附上 .deb
+      - name: Create GitHub Release (on tag)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: packages/*.deb

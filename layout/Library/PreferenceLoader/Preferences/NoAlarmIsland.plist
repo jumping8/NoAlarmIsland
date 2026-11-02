@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>title</key>
+    <string>NoAlarmIsland</string>
+    <key>label</key>
+    <string>禁止闹钟上岛</string>
+    <key>defaults</key>
+    <string>com.jumping.noalarmisland</string>
+    <key>items</key>
+    <array>
+        <dict>
+            <key>cell</key>
+            <string>PSGroupCell</string>
+            <key>label</key>
+            <string>禁止系统闹钟在灵动岛显示，其它灵动岛内容不受影响。</string>
+            <key>footerText</key>
+            <string>偏好实时读取，修改后无需 respring。</string>
+        </dict>
+        <dict>
+            <key>cell</key>
+            <string>PSSwitchCell</string>
+            <key>label</key>
+            <string>启用</string>
+            <key>key</key>
+            <string>Enabled</string>
+            <key>default</key>
+            <true/>
+        </dict>
+        <dict>
+            <key>cell</key>
+            <string>PSSwitchCell</string>
+            <key>label</key>
+            <string>禁止闹钟（Alarm）</string>
+            <key>key</key>
+            <string>BlockAlarm</string>
+            <key>default</key>
+            <true/>
+        </dict>
+        <dict>
+            <key>cell</key>
+            <string>PSSwitchCell</string>
+            <key>label</key>
+            <string>禁止计时器（Timer）</string>
+            <key>key</key>
+            <string>BlockTimer</string>
+            <key>default</key>
+            <false/>
+        </dict>
+    </array>
+</dict>
+</plist>

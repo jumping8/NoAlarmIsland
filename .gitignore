@@ -1,0 +1,12 @@
+# theos 构建产物
+/packages/
+/.theos/
+*.deb
+*.dylib
+
+# 本地 deb 暂存树里的编译产物（dylib 由 CI 生成）
+/deb/var/jb/Library/MobileSubstrate/DynamicLibraries/*.dylib
+
+# OS / 编辑器
+.DS_Store
+*.swp
